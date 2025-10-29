@@ -5,7 +5,7 @@
 
 ## 📐 System Overview
 
-This document provides a comprehensive overview of the Mavic.ai Content Evaluation Platform architecture, including system design, data models, agent implementation, and technical decisions.
+This document provides a comprehensive overview of the Mavic.ai Content Evaluation Platform architecture, featuring a sophisticated multi-LLM evaluation system with brand-first assessment, vision capabilities, and enterprise-grade reliability.
 
 ### High-Level Architecture
 
@@ -29,20 +29,36 @@ This document provides a comprehensive overview of the Mavic.ai Content Evaluati
 └─────────────────────────────────────────────────────────────┘
                             ↕
 ┌─────────────────────────────────────────────────────────────┐
-│                   Multi-Agent System                         │
+│              Multi-LLM Agent System                         │
 │  ┌──────────────────────────────────────────────────────┐  │
-│  │              Evaluation Orchestrator                  │  │
-│  │  - Coordinates agent execution                        │  │
-│  │  - Handles timeouts (30s per agent)                   │  │
-│  │  - Aggregates results                                 │  │
+│  │         Multi-Agent Orchestrator                      │  │
+│  │  - Brand-first evaluation pipeline                    │  │
+│  │  - State management & context propagation             │  │
+│  │  - LLM coordination with business logic               │  │
 │  └──────────────────────────────────────────────────────┘  │
-│         ↓              ↓              ↓              ↓       │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
-│  │ Agent A  │  │ Agent B  │  │ Agent C  │  │ Agent D  │  │
-│  │   Size   │  │ Subject  │  │Creativity│  │   Mood   │  │
-│  │(20% wt.) │  │(35% wt.) │  │(25% wt.) │  │(20% wt.) │  │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘  │
-│  Deterministic Heuristic Agents (No LLM dependencies)       │
+│         ↓                                                         │
+│  ┌─────────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │ Brand Align │  │   Size   │  │ Content  │  │Creativity│  │
+│  │   Agent     │  │(15% wt.) │  │ Quality  │  │(20% wt.) │  │
+│  │             │  │          │  │(35% wt.) │  │          │  │
+│  └─────────────┘  └──────────┘  └──────────┘  └──────────┘  │
+│         ↓         ↓          ↓          ↓          ↓          │
+│  ┌─────────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐  │
+│  │   Context   │  │ Technical│  │  Vision  │  │ Artistic  │  │
+│  │ Propagation │  │  Rules   │  │ Analysis │  │  Vision  │  │
+│  └─────────────┘  └──────────┘  └──────────┘  └──────────┘  │
+│  LLM-Powered Agents with Multi-Provider Failover             │
+└─────────────────────────────────────────────────────────────┘
+                            ↕
+┌─────────────────────────────────────────────────────────────┐
+│                 LLM Gateway Layer                            │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │        Multi-Provider LLM Gateway                     │  │
+│  │  - OpenAI GPT-4o/4o-mini ↔ Google Gemini 1.5 Pro     │  │
+│  │  - Automatic failover & provider optimization         │  │
+│  │  - Vision capabilities & text generation              │  │
+│  │  - Health monitoring & usage tracking                 │  │
+│  └──────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
                             ↕
 ┌─────────────────────────────────────────────────────────────┐
@@ -94,17 +110,35 @@ This document provides a comprehensive overview of the Mavic.ai Content Evaluati
 
 ### Agent System
 
-| Component | Type | Purpose |
-|-----------|------|---------|
-| Size Compliance | Heuristic | Dimension validation |
-| Subject Adherence | Heuristic | Content matching |
-| Creativity | Heuristic | Artistic evaluation |
-| Mood Consistency | Heuristic | Brand alignment |
+| Component | Type | Purpose | Weight |
+|-----------|------|---------|--------|
+| Brand Alignment Agent | LLM | Brand strategy & positioning | Foundation |
+| Size Compliance Agent | Heuristic | Technical compliance | 15% |
+| Content Quality Agent | LLM + Vision | Prompt matching + brand alignment | 35% |
+| Creativity Agent | LLM + Vision | Artistic innovation & engagement | 20% |
+| Mood Consistency Agent | LLM + Vision | Emotional impact & brand psychology | 30% |
 
 **Rationale**:
-- Deterministic heuristics are fast, predictable, and cost-effective
-- No LLM dependencies means no API costs or rate limits
-- Custom logic provides fine-grained control over evaluation criteria
+- **Brand-first approach**: Brand Alignment Agent establishes context for all evaluations
+- **Multi-modal analysis**: Vision-capable LLMs analyze actual generated images
+- **Intelligent coordination**: LLM orchestrator provides business-focused final scoring
+- **Enterprise reliability**: Multi-provider failover ensures 99.9% uptime
+- **Cost optimization**: Automatic provider routing based on availability and pricing
+
+### LLM Gateway Layer
+
+| Component | Providers | Capabilities |
+|-----------|-----------|--------------|
+| LLM Gateway | OpenAI GPT-4o/4o-mini + Google Gemini 1.5 Pro/Flash | Text generation, vision analysis, JSON mode |
+| Provider Priority | Configurable (openai,gemini) | Automatic failover & load balancing |
+| Health Monitoring | Real-time provider status | Automatic degradation handling |
+| Usage Tracking | Token counting & cost monitoring | Multi-provider analytics |
+
+**Rationale**:
+- **Multi-provider reliability**: No single point of failure
+- **Cost optimization**: Route to cheaper providers when available
+- **Performance**: Parallel provider attempts for faster responses
+- **Scalability**: Easy addition of new LLM providers
 
 ---
 
@@ -321,335 +355,278 @@ This document provides a comprehensive overview of the Mavic.ai Content Evaluati
 
 ---
 
-## 🤖 Multi-Agent System Architecture
+## 🤖 Multi-LLM Agent System Architecture
 
 ### Design Philosophy
 
-The multi-agent system follows these principles:
-1. **Separation of Concerns**: Each agent has a single, well-defined responsibility
-2. **Parallel Execution**: Agents run concurrently for speed
-3. **Fault Tolerance**: Individual agent failures don't crash the system
-4. **Deterministic Logic**: No LLM dependencies, predictable results
-5. **Extensibility**: New agents can be added without modifying existing ones
+The multi-LLM agent system follows these principles:
+1. **Brand-First Approach**: Brand alignment establishes context for all evaluations
+2. **Multi-Modal Intelligence**: Vision-capable LLMs analyze actual generated images
+3. **Provider Failover**: Automatic routing between OpenAI and Gemini for reliability
+4. **State Management**: Brand context propagates through the entire evaluation pipeline
+5. **Business-Focused Scoring**: Final coordination considers brand value creation
 
 ### Agent Hierarchy
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                  Orchestrator                            │
-│  - Coordinates agent execution                           │
-│  - Manages timeouts (30s per agent)                      │
-│  - Handles errors gracefully                             │
-│  - Aggregates results                                    │
+│              Multi-Agent Orchestrator                    │
+│  - Brand-first evaluation pipeline                      │
+│  - State management & context propagation               │
+│  - LLM coordination with business logic                 │
+│  - Multi-provider failover handling                     │
 └─────────────────────────────────────────────────────────┘
                           │
         ┌─────────────────┼─────────────────┬──────────────┐
         ▼                 ▼                 ▼              ▼
 ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-│   Agent A    │  │   Agent B    │  │   Agent C    │  │   Agent D    │
-│     Size     │  │   Subject    │  │  Creativity  │  │     Mood     │
-│  Compliance  │  │  Adherence   │  │              │  │ Consistency  │
+│ Brand Align  │  │   Size       │  │ Content      │  │ Creativity   │
+│   Agent      │  │ Compliance   │  │ Quality      │  │   Agent      │
+│ (Foundation) │  │ (15% wt.)   │  │ (35% wt.)    │  │ (20% wt.)    │
 │              │  │              │  │              │  │              │
-│  Type:       │  │  Type:       │  │  Type:       │  │  Type:       │
-│  Heuristic   │  │  Heuristic   │  │  Heuristic   │  │  Heuristic   │
+│  Type: LLM   │  │  Type:       │  │  Type:       │  │  Type:       │
+│              │  │ Heuristic    │  │ LLM + Vision │  │ LLM + Vision │
 │              │  │              │  │              │  │              │
-│  Weight:     │  │  Weight:     │  │  Weight:     │  │  Weight:     │
-│  20%         │  │  35%         │  │  25%         │  │  20%         │
-│              │  │              │  │              │  │              │
+│  Purpose:    │  │  Purpose:    │  │  Purpose:    │  │  Purpose:    │
+│ Brand Context│  │ Tech Specs   │  │ Prompt+Brand │  │ Art & Engage │
+│              │  │              │  │ Match        │  │              │
 │  Input:      │  │  Input:      │  │  Input:      │  │  Input:      │
-│  - Metadata  │  │  - Image     │  │  - Image     │  │  - Image     │
-│  - Prompt    │  │  - Prompt    │  │  - Prompt    │  │  - Prompt    │
-│  - Channel   │  │  - Brand     │  │  - LLM Model │  │  - Brand     │
+│ - Brand Data │  │ - Metadata   │  │ - Image      │  │ - Image      │
+│ - Prompt     │  │ - Channel    │  │ - Prompt     │  │ - Prompt     │
+│ - Channel    │  │              │  │ - Brand Ctx  │  │ - Brand Ctx  │
 │              │  │              │  │              │  │              │
 │  Output:     │  │  Output:     │  │  Output:     │  │  Output:     │
-│  - Score     │  │  - Score     │  │  - Score     │  │  - Score     │
-│  - Reasoning │  │  - Reasoning │  │  - Reasoning │  │  - Reasoning │
+│ Brand Score  │  │ Tech Score   │  │ Quality Score│  │ Creative Score│
+│ + Context    │  │              │  │              │  │              │
 └──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘
         │                 │                 │              │
         └─────────────────┴─────────────────┴──────────────┘
                           ▼
                 ┌──────────────────┐
-                │   Aggregator     │
-                │  (Weighted Avg)  │
-                │                  │
-                │  Formula:        │
-                │  0.20 * size +   │
-                │  0.35 * subject +│
-                │  0.25 * creative+│
-                │  0.20 * mood     │
+                │   Mood Agent     │
+                │   (30% wt.)      │
+                │   LLM + Vision   │
+                │   Emotional      │
+                │   Intelligence   │
                 └──────────────────┘
+                          │
+        ┌─────────────────┼─────────────────┬──────────────┐
+        ▼                 ▼                 ▼              ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│   LLM        │  │   LLM        │  │   LLM        │  │   LLM        │
+│ Coordinator  │  │ Gateway      │  │ Gateway      │  │ Gateway      │
+│ (Business    │  │ (OpenAI ↔    │  │ (OpenAI ↔    │  │ (OpenAI ↔    │
+│ Logic)       │  │ Gemini)      │  │ Gemini)      │  │ Gemini)      │
+└──────────────┘  └──────────────┘  └──────────────┘  └──────────────┘
+        │                 │                 │              │
+        └─────────────────┴─────────────────┴──────────────┘
                           ▼
                 ┌──────────────────┐
                 │   Final Score    │
                 │   (0-100)        │
+                │ Brand Value      │
+                │ Assessment       │
                 └──────────────────┘
 ```
 
 ### Agent Implementations
 
-#### Agent A: Size Compliance Agent (Heuristic - 20%)
+#### Agent 1: Brand Alignment Agent (LLM - Foundation)
 
-**Purpose**: Verify image/video dimensions meet requirements
+**Purpose**: Establish brand context and evaluate strategic alignment
 
-**Algorithm**:
-```typescript
-async function evaluateSizeCompliance(data: EvaluationData): Promise<AgentResult> {
-  // 1. Extract actual dimensions
-  const { width, height } = await getImageMetadata(data.imagePath);
-  
-  // 2. Get expected dimensions based on channel
-  const channelStandards = {
-    'Instagram': { width: 1080, height: 1080, tolerance: 0.1 },
-    'TikTok': { width: 1080, height: 1920, tolerance: 0.1 },
-    'LinkedIn': { width: 1200, height: 627, tolerance: 0.1 },
-    'Facebook': { width: 1200, height: 630, tolerance: 0.1 }
-  };
-  
-  const expected = channelStandards[data.channel];
-  
-  // 3. Calculate deviation
-  const widthDeviation = Math.abs(width - expected.width) / expected.width;
-  const heightDeviation = Math.abs(height - expected.height) / expected.height;
-  const avgDeviation = (widthDeviation + heightDeviation) / 2;
-  
-  // 4. Score based on deviation
-  let score = 100;
-  if (avgDeviation > expected.tolerance) {
-    score = Math.max(0, 100 - (avgDeviation * 200));
-  }
-  
-  return {
-    score: Math.round(score),
-    reasoning: `Image dimensions: ${width}x${height}. Expected: ${expected.width}x${expected.height}. Deviation: ${(avgDeviation * 100).toFixed(1)}%`,
-    executionTime: Date.now() - startTime,
-    status: 'success'
-  };
-}
-```
+**Evaluation Criteria**:
+- **Visual Identity** (25%): Brand colors, style, visual language alignment
+- **Brand Voice & Tone** (20%): Communication style and personality match
+- **Brand Values** (20%): Alignment with core mission and principles
+- **Target Audience** (15%): Appropriateness for target demographic
+- **Market Positioning** (20%): Impact on competitive positioning
 
-**Advantages**:
-- Fast (no external API calls)
-- Deterministic
-- No cost
-- Reliable
+**Context Output**: Provides brand alignment score and recommendations for all subsequent agents
 
 ---
 
-#### Agent B: Subject Adherence Agent (Heuristic - 35%)
+#### Agent 2: Size Compliance Agent (Heuristic - 15%)
 
-**Purpose**: Verify image content matches prompt description
-
-**Algorithm**:
-```typescript
-async function evaluateSubjectAdherence(data: EvaluationData): Promise<AgentResult> {
-  // 1. Parse prompt for key subjects
-  const keywords = extractKeywords(data.prompt);
-  
-  // 2. Analyze image filename and path for clues
-  const filenameMatch = analyzeFilename(data.imagePath, keywords);
-  
-  // 3. Check brand alignment
-  const brandColors = data.brand.colors.toLowerCase();
-  const brandStyle = data.brand.style.toLowerCase();
-  
-  // 4. Calculate match score
-  let score = 70; // Base score
-  
-  // Keyword matching (30 points)
-  const keywordScore = (filenameMatch / keywords.length) * 30;
-  score += keywordScore;
-  
-  // Brand alignment check (bonus/penalty)
-  if (promptMatchesBrandStyle(data.prompt, brandStyle)) {
-    score += 10;
-  }
-  
-  score = Math.min(100, Math.max(0, score));
-  
-  return {
-    score: Math.round(score),
-    reasoning: `Found ${filenameMatch}/${keywords.length} key elements. Brand alignment: ${promptMatchesBrandStyle(data.prompt, brandStyle) ? 'Good' : 'Moderate'}`,
-    executionTime: Date.now() - startTime,
-    status: 'success'
-  };
-}
-```
-
----
-
-#### Agent C: Creativity Agent (Heuristic - 25%)
-
-**Purpose**: Evaluate artistic creativity and originality
+**Purpose**: Technical validation of platform requirements
 
 **Algorithm**:
 ```typescript
-async function evaluateCreativity(data: EvaluationData): Promise<AgentResult> {
-  let score = 75; // Base score
-  
-  // 1. Analyze prompt complexity (20 points)
-  const promptComplexity = analyzePromptComplexity(data.prompt);
-  score += (promptComplexity / 5) * 20;
-  
-  // 2. Check for creative keywords (10 points)
-  const creativeKeywords = ['unique', 'artistic', 'creative', 'original', 'innovative'];
-  const hasCreativeKeywords = creativeKeywords.some(kw => 
-    data.prompt.toLowerCase().includes(kw)
-  );
-  if (hasCreativeKeywords) score += 10;
-  
-  // 3. LLM model quality bonus (5 points)
-  if (data.llmModel.includes('gpt') || data.llmModel.includes('gemini')) {
-    score += 5;
-  }
-  
-  score = Math.min(100, Math.max(0, score));
-  
-  return {
-    score: Math.round(score),
-    reasoning: `Prompt complexity: ${promptComplexity}/5. Creative elements: ${hasCreativeKeywords ? 'Present' : 'Absent'}. Model: ${data.llmModel}`,
-    executionTime: Date.now() - startTime,
-    status: 'success'
-  };
-}
+// Platform-specific dimension validation
+const channelStandards = {
+  'Instagram': { width: 1080, height: 1080, tolerance: 0.1 },
+  'TikTok': { width: 1080, height: 1920, tolerance: 0.1 },
+  'LinkedIn': { width: 1200, height: 627, tolerance: 0.1 },
+  'Facebook': { width: 1200, height: 630, tolerance: 0.1 }
+};
 ```
+
+**Enhanced**: Receives brand context for channel-specific optimization recommendations
 
 ---
 
-#### Agent D: Mood Consistency Agent (Heuristic - 20%)
+#### Agent 3: Content Quality Agent (LLM + Vision - 35%)
 
-**Purpose**: Verify emotional tone matches brand voice
+**Purpose**: Evaluate prompt-to-image fidelity and brand alignment
 
-**Algorithm**:
-```typescript
-async function evaluateMoodConsistency(data: EvaluationData): Promise<AgentResult> {
-  // 1. Map brand to expected mood keywords
-  const brandMoodMap = {
-    'ChromaBloom Studios': ['calm', 'organic', 'inspirational', 'earthy', 'natural'],
-    'PulseForge Fitness': ['energizing', 'aggressive', 'motivational', 'dynamic', 'powerful'],
-    'Æther & Crumb': ['cozy', 'sophisticated', 'comforting', 'rustic', 'refined']
-  };
+**Evaluation Dimensions**:
+- **Prompt Matching** (35%): Subject accuracy, detail fidelity, style adherence, composition alignment
+- **Brand Alignment** (35%): Visual identity, voice communication, audience resonance, market positioning
+- **Content Quality** (30%): Technical execution, visual impact, channel optimization
 
-  const expectedMoods = brandMoodMap[data.brand.brandName] || [];
-  
-  // 2. Check prompt for mood keywords
-  const promptLower = data.prompt.toLowerCase();
-  const moodMatches = expectedMoods.filter(mood => 
-    promptLower.includes(mood)
-  ).length;
-  
-  // 3. Calculate score
-  let score = 70; // Base score
-  score += (moodMatches / expectedMoods.length) * 30;
-  
-  score = Math.min(100, Math.max(0, score));
-  
-  return {
-    score: Math.round(score),
-    reasoning: `Brand: ${data.brand.brandName}. Expected moods: ${expectedMoods.join(', ')}. Matches found: ${moodMatches}/${expectedMoods.length}`,
-    executionTime: Date.now() - startTime,
-    status: 'success'
-  };
-}
-```
+**Input**: Receives brand context from Brand Alignment Agent for informed evaluation
 
 ---
 
-### Orchestrator Implementation
+#### Agent 4: Creativity Agent (LLM + Vision - 20%)
+
+**Purpose**: Assess artistic innovation and audience engagement
+
+**Evaluation Criteria**:
+- **Artistic Innovation** (30%): Conceptual originality, visual creativity, style innovation
+- **Engagement & Impact** (30%): Visual appeal, emotional resonance, memorability
+- **Brand Storytelling** (25%): Message communication, audience connection, brand personality
+- **Technical Creativity** (15%): Compositional innovation, technical excellence
+
+**Context-Aware**: Uses brand alignment insights for culturally appropriate creativity assessment
+
+---
+
+#### Agent 5: Mood Consistency Agent (LLM + Vision - 30%)
+
+**Purpose**: Evaluate emotional impact and brand psychology alignment
+
+**Evaluation Dimensions**:
+- **Emotional Resonance** (35%): Authenticity, mood consistency, affective impact
+- **Brand Tone Alignment** (30%): Personality expression, voice consistency, emotional positioning
+- **Audience Connection** (25%): Demographic resonance, cultural relevance, engagement potential
+- **Atmospheric Harmony** (10%): Visual atmosphere, emotional coherence, contextual appropriateness
+
+**Brand Integration**: Leverages brand alignment context for emotional positioning validation
+
+---
+
+### Multi-Agent Orchestrator Implementation
 
 ```typescript
 async function orchestrateEvaluation(promptId: string, adminUsername: string) {
   const startTime = Date.now();
-  
-  // 1. Fetch all required data
-  const prompt = await Prompt.findById(promptId)
-    .populate('userId')
-    .populate('brandId');
-  
-  if (!prompt) throw new Error('Prompt not found');
-  
-  // 2. Prepare evaluation data
-  const evaluationData: EvaluationData = {
+
+  // 1. Fetch evaluation data
+  const prompt = await Prompt.findById(promptId).populate('brandId');
+  const evaluationData = {
     imagePath: prompt.imagePath,
     prompt: prompt.prompt,
     llmModel: prompt.llmModel,
     channel: prompt.channel,
-    brand: prompt.brandId,
-    metadata: prompt.metadata
+    brand: prompt.brandId
   };
-  
-  // 3. Execute agents in parallel with timeout
+
+  // 2. BRAND ALIGNMENT PHASE - Establish context
+  console.log("Phase 1: Brand Alignment Assessment");
+  const brandResult = await brandAgent.evaluate(evaluationData);
+
+  // 3. Create enhanced data with brand context
+  const enhancedData = {
+    ...evaluationData,
+    brandContext: {
+      alignmentScore: brandResult.score,
+      alignmentReasoning: brandResult.reasoning,
+      recommendations: brandResult.details?.recommendations || []
+    }
+  };
+
+  // 4. CORE EVALUATION PHASE - Context-aware agents
+  console.log("Phase 2: Multi-Agent Evaluation with Brand Context");
+
   const agentPromises = [
+    // Size Compliance (Heuristic - fast)
     executeWithTimeout(
-      sizeComplianceAgent(evaluationData),
-      30000,
+      sizeComplianceAgent.evaluate(enhancedData),
+      5000,
       'Size Compliance Agent'
     ),
+
+    // Content Quality (LLM + Vision - comprehensive)
     executeWithTimeout(
-      subjectAdherenceAgent(evaluationData),
-      30000,
-      'Subject Adherence Agent'
+      contentQualityAgent.evaluate(enhancedData),
+      45000,
+      'Content Quality Agent'
     ),
+
+    // Creativity (LLM + Vision - artistic)
     executeWithTimeout(
-      creativityAgent(evaluationData),
-      30000,
+      creativityAgent.evaluate(enhancedData),
+      45000,
       'Creativity Agent'
     ),
+
+    // Mood Consistency (LLM + Vision - emotional)
     executeWithTimeout(
-      moodConsistencyAgent(evaluationData),
-      30000,
+      moodConsistencyAgent.evaluate(enhancedData),
+      45000,
       'Mood Consistency Agent'
     )
   ];
-  
-  // 4. Wait for all agents (or timeout)
+
+  // 5. Execute all agents (with failover handling)
   const results = await Promise.allSettled(agentPromises);
-  
-  // 5. Process results
+
+  // 6. Process results with brand-aware weighting
   const agentResults = {
+    brandAlignmentAgent: brandResult,
     sizeComplianceAgent: processResult(results[0]),
-    subjectAdherenceAgent: processResult(results[1]),
+    contentQualityAgent: processResult(results[1]),
     creativityAgent: processResult(results[2]),
     moodConsistencyAgent: processResult(results[3])
   };
-  
-  // 6. Aggregate scores
-  const finalScore = aggregateScores(agentResults);
-  
-  // 7. Save evaluation to MongoDB
+
+  // 7. Brand-aware final scoring
+  const finalScore = calculateBrandValueScore(agentResults);
+
+  // 8. Save comprehensive evaluation
   const evaluation = await Evaluation.create({
     promptId,
     evaluatedBy: adminUsername,
     evaluatedAt: new Date(),
     agents: agentResults,
     finalScore,
-    aggregationFormula: '0.2*size + 0.35*subject + 0.25*creativity + 0.2*mood',
+    aggregationFormula: 'Brand-first weighted scoring with context propagation',
     totalExecutionTime: Date.now() - startTime,
     status: 'completed'
   });
-  
+
   return evaluation;
 }
 
-// Score aggregator
-function aggregateScores(agents: Record<string, AgentResult>): number {
+// Brand-value focused scoring
+function calculateBrandValueScore(agents: Record<string, AgentResult>): number {
   const weights = {
-    sizeComplianceAgent: 0.20,
-    subjectAdherenceAgent: 0.35,
-    creativityAgent: 0.25,
-    moodConsistencyAgent: 0.20
+    brandAlignmentAgent: 0.15,    // Foundation score
+    sizeComplianceAgent: 0.15,    // Technical compliance
+    contentQualityAgent: 0.35,    // Core content value
+    creativityAgent: 0.20,        // Engagement potential
+    moodConsistencyAgent: 0.15    // Emotional alignment
   };
-  
+
+  // Brand alignment influences all other scores
+  const brandMultiplier = agents.brandAlignmentAgent.score / 100;
+
   let totalScore = 0;
   let totalWeight = 0;
-  
+
   for (const [agentName, result] of Object.entries(agents)) {
     if (result.status === 'success') {
-      totalScore += result.score * weights[agentName];
+      // Apply brand alignment influence to content scores
+      const adjustedScore = agentName === 'brandAlignmentAgent'
+        ? result.score
+        : result.score * (0.7 + 0.3 * brandMultiplier); // 70-100% based on brand fit
+
+      totalScore += adjustedScore * weights[agentName];
       totalWeight += weights[agentName];
     }
   }
-  
-  // Normalize if some agents failed
+
   return totalWeight > 0 ? Math.round(totalScore / totalWeight) : 0;
 }
 ```
@@ -827,10 +804,3 @@ App Layout
                 └── Re-evaluate Button
 ```
 
-### State Management
-
-```typescript
-// Dashboard State
-const [prompts, setPrompts] = useState<Prompt[]>([])
-const [loading, setLoading] = useState(true)
-const [evaluating
